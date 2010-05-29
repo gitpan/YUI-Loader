@@ -1,52 +1,64 @@
-use inc::Module::Install;
 
-name     'YUI-Loader';
-all_from 'lib/YUI/Loader.pm';
-author   'Robert Krimen <rkrimen@cpan.org>';
+use strict;
+use warnings;
 
-resources repository => 'http://github.com/robertkrimen/yui-loader/tree/master';
 
-{
-    require ExtUtils::MakeMaker;
-    use strict;
-    no strict 'refs';
 
-    my $libscan = \&{"ExtUtils::MM_Any::libscan"};
-    *{"ExtUtils::MM_Any::libscan"} = sub {
-        return '' unless $libscan->(@_);
-        return '' if $_[1] =~ /\.sw[p-z]$/;
-        return $_[1];
-    };
+use ExtUtils::MakeMaker 6.31;
+
+
+
+my %WriteMakefileArgs = (
+                       'test' => {
+                                   'TESTS' => 't/*.t'
+                                 },
+                       'NAME' => 'YUI::Loader',
+                       'DISTNAME' => 'YUI-Loader',
+                       'CONFIGURE_REQUIRES' => {
+                                                 'ExtUtils::MakeMaker' => '6.31'
+                                               },
+                       'AUTHOR' => 'Robert Krimen <robertkrimen@gmail.com>',
+                       'BUILD_REQUIRES' => {
+                                             'Directory::Scratch' => '0',
+                                             'Test::Most' => '0'
+                                           },
+                       'ABSTRACT' => 'Load (and cache) the Yahoo JavaScript YUI framework',
+                       'EXE_FILES' => [],
+                       'VERSION' => '0.071',
+                       'PREREQ_PM' => {
+                                        'Scalar::Util' => '0',
+                                        'HTML::Declare' => '0',
+                                        'File::Copy' => '0',
+                                        'URI' => '0',
+                                        'Carp::Clan::Share' => '0',
+                                        'LWP::UserAgent' => '0',
+                                        'Path::Class' => '0',
+                                        'Algorithm::Dependency' => '0',
+                                        'JSON' => '2.08',
+                                        'Path::Abstract' => '0',
+                                        'Moose' => '0'
+                                      },
+                       'LICENSE' => 'perl'
+                     );
+
+
+unless ( eval { ExtUtils::MakeMaker->VERSION(6.56) } ) {
+  my $br = delete $WriteMakefileArgs{BUILD_REQUIRES};
+  my $pp = $WriteMakefileArgs{PREREQ_PM}; 
+  for my $mod ( keys %$br ) {
+    if ( exists $pp->{$mod} ) {
+      $pp->{$mod} = $br->{$mod} if $br->{$mod} > $pp->{$mod}; 
+    }
+    else {
+      $pp->{$mod} = $br->{$mod};
+    }
+  }
 }
 
-{
-    map { my ($pk, $vr) = split m/\s/; build_requires $pk => $vr || 0 } grep { ! /^\s*#/ } split m/\n/, <<_END_;
-Test::Most
-Directory::Scratch
-_END_
+delete $WriteMakefileArgs{CONFIGURE_REQUIRES}
+  unless eval { ExtUtils::MakeMaker->VERSION(6.52) };
 
-    map { my ($pk, $vr) = split m/\s/; requires $pk => $vr || 0 } grep { ! /^\s*#/ } split m/\n/, <<_END_;
-Algorithm::Dependency
-Carp::Clan::Share
-File::Copy
-HTML::Declare
-JSON 2.08
-LWP::UserAgent
-Moose
-Path::Abstract
-Path::Class
-Scalar::Util
-URI
-_END_
-}
+WriteMakefile(%WriteMakefileArgs);
 
-if (-e 'inc/.author') {
-    my $all_from = join '/', 'lib', split m/-/, name . '.pm';
-    `perldoc -tF $all_from > README` if ! -e 'README' || (stat $all_from)[9] > (stat 'README')[9];
-}
 
-tests_recursive;
 
-auto_install;
-
-WriteAll;

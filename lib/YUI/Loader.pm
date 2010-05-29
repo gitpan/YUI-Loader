@@ -1,60 +1,14 @@
 package YUI::Loader;
+BEGIN {
+  $YUI::Loader::VERSION = '0.071';
+}
+# ABSTRACT: Load (and cache) the Yahoo JavaScript YUI framework
 
 use warnings;
 use strict;
 
-=head1 NAME
 
-YUI::Loader - Load (and cache) the Yahoo JavaScript YUI framework
-
-=head1 VERSION
-
-Version 0.07
-
-=head1 SYNOPSIS
-
-    use YUI::Loader;
-
-    my $loader = YUI::Loader->new_from_yui_host;
-    $loader->include->yuitest->reset->fonts->base;
-    print $loader->html;
-
-    # The above will yield:
-    # <link rel="stylesheet" href="http://yui.yahooapis.com/2.5.1/build/reset/reset.css" type="text/css"/>
-    # <link rel="stylesheet" href="http://yui.yahooapis.com/2.5.1/build/fonts/fonts.css" type="text/css"/>
-    # <link rel="stylesheet" href="http://yui.yahooapis.com/2.5.1/build/base/base.css" type="text/css"/>
-    # <script src="http://yui.yahooapis.com/2.5.1/build/yahoo/yahoo.js" type="text/javascript"></script>
-    # <script src="http://yui.yahooapis.com/2.5.1/build/dom/dom.js" type="text/javascript"></script>
-    # <script src="http://yui.yahooapis.com/2.5.1/build/event/event.js" type="text/javascript"></script>
-    # <script src="http://yui.yahooapis.com/2.5.1/build/logger/logger.js" type="text/javascript"></script>
-    # <script src="http://yui.yahooapis.com/2.5.1/build/yuitest/yuitest.js" type="text/javascript"></script>
-
-You can also cache YUI locally:
-
-    my $loader = YUI::Loader->new_from_yui_host(cache => { dir => "htdocs/assets", uri => "http://example.com/assets" });
-    $loader->include->yuitest->reset->fonts->base;
-    print $loader->html;
-
-    # The above will yield:
-    # <link rel="stylesheet" href="http://example.com/assets/reset.css" type="text/css"/>
-    # <link rel="stylesheet" href="http://example.com/assets/fonts.css" type="text/css"/>
-    # <link rel="stylesheet" href="http://example.com/assets/base.css" type="text/css"/>
-    # <script src="http://example.com/assets/yahoo.js" type="text/javascript"></script>
-    # <script src="http://example.com/assets/dom.js" type="text/javascript"></script>
-    # <script src="http://example.com/assets/event.js" type="text/javascript"></script>
-    # <script src="http://example.com/assets/logger.js" type="text/javascript"></script>
-    # <script src="http://example.com/assets/yuitest.js" type="text/javascript"></script>
-
-=head1 DESCRIPTION
-
-YUI::Loader is a tool for loading YUI assets within your application. Loader will either provide the URI/HTML to access http://yui.yahooapis.com directly,
-or you can cache assets locally or serve them from an exploded yui_x.x.x.zip dir.
-
-=cut
-
-our $VERSION = '0.07';
-
-use constant LATEST_YUI_VERSION => "2.5.1";
+use constant LATEST_YUI_VERSION => "2.8.1";
 
 use Moose;
 
@@ -77,17 +31,7 @@ has source => qw/is ro required 1 isa YUI::Loader::Source/;
 has cache => qw/is ro isa YUI::Loader::Cache/;
 has filter => qw/is rw isa Str/, default => "";
 
-=head1 METHODS
 
-=cut
-
-=head2 YUI::Loader->new_from_yui_host([ base => <base>, version => <version> ])
-
-=head2 YUI::Loader->new_from_internet([ base => <base>, version => <version> ])
-
-Return a new YUI::Loader object configured to fetch and/or serve assets from http://yui.yahooapis.com/<version>
-
-=cut
 
 sub new_from_yui_host {
     return shift->new_from_internet(@_);
@@ -107,15 +51,6 @@ sub new_from_internet {
     return $class->_new_finish($given, $source);
 }
 
-=head2 YUI::Loader->new_from_yui_dir([ dir => <dir>, version => <version> ])
-
-Return a new YUI::Loader object configured to fetch/serve assets from a local, exploded yui_x.x.x.zip dir
-
-As an example, for a dir of C<./assets>, the C<reset.css> asset should be available as:
-
-    ./assets/reset/reset.css
-
-=cut
 
 sub new_from_yui_dir {
     my $class = shift;
@@ -132,15 +67,6 @@ sub new_from_yui_dir {
     return $class->_new_finish($given, $source);
 }
 
-=head2 YUI::Loader->new_from_uri([ base => <base> ])
-
-Return a new YUI::Loader object configured to serve assets from an arbitrary uri
-
-As an example, for a base of C<http://example.com/assets>, the C<reset.css> asset should be available as:
-
-    http://example.com/assets/reset.css
-
-=cut
 
 sub new_from_uri {
     my $class = shift;
@@ -155,15 +81,6 @@ sub new_from_uri {
     return $class->_new_finish($given, $source);
 }
 
-=head2 YUI::Loader->new_from_dir([ dir => <dir> ])
-
-Return a new YUI::Loader object configured to serve assets from an arbitrary dir
-
-As an example, for a dir of C<./assets>, the C<reset.css> asset should be available as:
-
-    ./assets/reset.css
-
-=cut
 
 sub new_from_dir {
     my $class = shift;
@@ -179,46 +96,7 @@ sub new_from_dir {
     return $class->_new_finish($given, $source);
 }
 
-=head2 select( <component>, <component>, ..., <component> )
 
-Include each <component> in the "manifest" for the loader.
-
-A <component> should correspond to an entry in the C<YUI component catalog> (see below)
-
-=head2 include
-
-Returns a chainable component selector that will include what is called
-
-You can use the methods of the selector to choose components to include. See C<YUI component catalog> below 
-
-You can return to the loader by using the special ->then method:
-
-    $loader->include->reset->yuilogger->grids->fonts->then->html;
-
-=head2 exclude
-
-Returns a chainable component selector that will exclude what is called
-
-You can use the methods of the selector to choose components to include. See C<YUI component catalog> below 
-
-You can return to the loader by using the special ->then method:
-
-    $loader->exclude->yuilogger->then->html;
-
-=cut
-
-=head2 filter_min 
-
-Turn on the -min filter for all included components
-
-For example:
-
-    connection-min.js
-    yuilogger-min.js
-    base-min.css
-    fonts-min.css
-
-=cut
 
 sub filter_min {
     my $self = shift;
@@ -226,18 +104,6 @@ sub filter_min {
     return $self;
 }
 
-=head2 filter_debug 
-
-Turn on the -debug filter for all included components
-
-For example:
-
-    connection-debug.js
-    yuilogger-debug.js
-    base-debug.css
-    fonts-debug.css
-
-=cut
 
 sub filter_debug {
     my $self = shift;
@@ -245,18 +111,6 @@ sub filter_debug {
     return $self;
 }
 
-=head2 no_filter 
-
-Disable filtering of included components
-
-For example:
-
-    connection.js
-    yuilogger.js
-    base.css
-    fonts.css
-
-=cut
 
 sub no_filter {
     my $self = shift;
@@ -264,13 +118,6 @@ sub no_filter {
     return $self;
 }
 
-=head2 uri( <component> )
-
-Attempt to fetch a L<URI> for <component> using the current filter setting of the loader (-min, -debug, etc.)
-
-If the loader has a cache, then this method will try to fetch from the cache. Otherwise it will use the source.
-
-=cut
 
 sub uri {
     my $self = shift;
@@ -278,13 +125,6 @@ sub uri {
     return $self->source_uri(@_);
 }
 
-=head2 file( <component> )
-
-Attempt to fetch a L<Path::Class::File> for <component> using the current filter setting of the loader (-min, -debug, etc.)
-
-If the loader has a cache, then this method will try to fetch from the cache. Otherwise it will use the source.
-
-=cut
 
 sub file {
     my $self = shift;
@@ -292,11 +132,6 @@ sub file {
     return $self->source_file(@_);
 }
 
-=head2 cache_uri( <component> )
-
-Attempt to fetch a L<URI> for <component> using the current filter setting of the loader (-min, -debug, etc.) from the cache
-
-=cut
 
 sub cache_uri {
     my $self = shift;
@@ -304,11 +139,6 @@ sub cache_uri {
     return $self->cache->uri([ $name => $self->filter ]) || croak "Unable to get uri for $name from cache ", $self->cache;
 }
 
-=head2 cache_file( <component> )
-
-Attempt to fetch a L<Path::Class::File> for <component> using the current filter setting of the loader (-min, -debug, etc.) from the cache
-
-=cut
 
 sub cache_file {
     my $self = shift;
@@ -316,11 +146,6 @@ sub cache_file {
     return $self->cache->file([ $name => $self->filter ]) || croak "Unable to get file for $name from cache ", $self->cache;
 }
 
-=head2 source_uri( <component> )
-
-Attempt to fetch a L<URI> for <component> using the current filter setting of the loader (-min, -debug, etc.) from the source
-
-=cut
 
 sub source_uri {
     my $self = shift;
@@ -328,11 +153,6 @@ sub source_uri {
     return $self->source->uri([ $name => $self->filter ]) || croak "Unable to get uri for $name from source ", $self->source;
 }
 
-=head2 source_file( <component> )
-
-Attempt to fetch a L<Path::Class::File> for <component> using the current filter setting of the loader (-min, -debug, etc.) from the source
-
-=cut
 
 sub source_file {
     my $self = shift;
@@ -340,11 +160,6 @@ sub source_file {
     return $self->source->file([ $name => $self->filter ]) || croak "Unable to get file for $name from source ", $self->source;
 }
 
-=head2 item( <component> )
-
-Return a L<YUI::Loader::Item> for <component> using the current filter setting of the loader (-min, -debug, etc.)
-
-=cut
 
 sub item {
     my $self = shift;
@@ -352,11 +167,6 @@ sub item {
     return $self->catalog->item([ $name => $self->filter ]);
 }
 
-=head2 item_path( <component> )
-
-Return the item path for <component> using the current filter setting of the loader (-min, -debug, etc.)
-
-=cut
 
 sub item_path {
     my $self = shift;
@@ -364,11 +174,6 @@ sub item_path {
     return $self->item($name)->path;
 }
 
-=head2 item_file( <component> )
-
-Return the item file for <component> using the current filter setting of the loader (-min, -debug, etc.)
-
-=cut
 
 sub item_file {
     my $self = shift;
@@ -398,48 +203,12 @@ sub _html {
     return join $separator, @html;
 }
 
-=head2 html
-
-Generate and return a string containing HTML describing how to include components. For example, you can use this in the <head> section
-of a web page.
-
-If the loader has a cache, then it will attempt to generate URIs from the cache, otherwise it will use the source.
-
-Here is an example:
-
-    <link rel="stylesheet" href="http://example.com/assets/reset.css" type="text/css"/>
-    <link rel="stylesheet" href="http://example.com/assets/fonts.css" type="text/css"/>
-    <link rel="stylesheet" href="http://example.com/assets/base.css" type="text/css"/>
-    <script src="http://example.com/assets/yahoo.js" type="text/javascript"></script>
-    <script src="http://example.com/assets/dom.js" type="text/javascript"></script>
-    <script src="http://example.com/assets/event.js" type="text/javascript"></script>
-    <script src="http://example.com/assets/logger.js" type="text/javascript"></script>
-    <script src="http://example.com/assets/yuitest.js" type="text/javascript"></script>
-
-=cut
 
 sub html {
     my $self = shift;
     return $self->_html([ $self->list->uri ], @_);
 }
 
-=head2 source_html
-
-Generate and return a string containing HTML describing how to include components. For example, you can use this in the <head> section
-of a web page.
-
-Here is an example:
-
-    <link rel="stylesheet" href="http://example.com/assets/reset.css" type="text/css"/>
-    <link rel="stylesheet" href="http://example.com/assets/fonts.css" type="text/css"/>
-    <link rel="stylesheet" href="http://example.com/assets/base.css" type="text/css"/>
-    <script src="http://example.com/assets/yahoo.js" type="text/javascript"></script>
-    <script src="http://example.com/assets/dom.js" type="text/javascript"></script>
-    <script src="http://example.com/assets/event.js" type="text/javascript"></script>
-    <script src="http://example.com/assets/logger.js" type="text/javascript"></script>
-    <script src="http://example.com/assets/yuitest.js" type="text/javascript"></script>
-
-=cut
 
 sub source_html {
     my $self = shift;
@@ -517,6 +286,225 @@ sub _new_finish {
 
     return $class->new(%$given, source => $source);
 }
+
+
+
+1;
+
+__END__
+=pod
+
+=head1 NAME
+
+YUI::Loader - Load (and cache) the Yahoo JavaScript YUI framework
+
+=head1 VERSION
+
+version 0.071
+
+=head1 SYNOPSIS
+
+    use YUI::Loader;
+
+    my $loader = YUI::Loader->new_from_yui_host;
+    $loader->include->yuitest->reset->fonts->base;
+    print $loader->html;
+
+    # The above will yield:
+    # <link rel="stylesheet" href="http://yui.yahooapis.com/2.5.1/build/reset/reset.css" type="text/css"/>
+    # <link rel="stylesheet" href="http://yui.yahooapis.com/2.5.1/build/fonts/fonts.css" type="text/css"/>
+    # <link rel="stylesheet" href="http://yui.yahooapis.com/2.5.1/build/base/base.css" type="text/css"/>
+    # <script src="http://yui.yahooapis.com/2.5.1/build/yahoo/yahoo.js" type="text/javascript"></script>
+    # <script src="http://yui.yahooapis.com/2.5.1/build/dom/dom.js" type="text/javascript"></script>
+    # <script src="http://yui.yahooapis.com/2.5.1/build/event/event.js" type="text/javascript"></script>
+    # <script src="http://yui.yahooapis.com/2.5.1/build/logger/logger.js" type="text/javascript"></script>
+    # <script src="http://yui.yahooapis.com/2.5.1/build/yuitest/yuitest.js" type="text/javascript"></script>
+
+You can also cache YUI locally:
+
+    my $loader = YUI::Loader->new_from_yui_host(cache => { dir => "htdocs/assets", uri => "http://example.com/assets" });
+    $loader->include->yuitest->reset->fonts->base;
+    print $loader->html;
+
+    # The above will yield:
+    # <link rel="stylesheet" href="http://example.com/assets/reset.css" type="text/css"/>
+    # <link rel="stylesheet" href="http://example.com/assets/fonts.css" type="text/css"/>
+    # <link rel="stylesheet" href="http://example.com/assets/base.css" type="text/css"/>
+    # <script src="http://example.com/assets/yahoo.js" type="text/javascript"></script>
+    # <script src="http://example.com/assets/dom.js" type="text/javascript"></script>
+    # <script src="http://example.com/assets/event.js" type="text/javascript"></script>
+    # <script src="http://example.com/assets/logger.js" type="text/javascript"></script>
+    # <script src="http://example.com/assets/yuitest.js" type="text/javascript"></script>
+
+=head1 DESCRIPTION
+
+YUI::Loader is a tool for loading YUI assets within your application. Loader will either provide the URI/HTML to access http://yui.yahooapis.com directly,
+or you can cache assets locally or serve them from an exploded yui_x.x.x.zip dir.
+
+=head1 METHODS
+
+=head2 YUI::Loader->new_from_yui_host([ base => <base>, version => <version> ])
+
+=head2 YUI::Loader->new_from_internet([ base => <base>, version => <version> ])
+
+Return a new YUI::Loader object configured to fetch and/or serve assets from http://yui.yahooapis.com/<version>
+
+=head2 YUI::Loader->new_from_yui_dir([ dir => <dir>, version => <version> ])
+
+Return a new YUI::Loader object configured to fetch/serve assets from a local, exploded yui_x.x.x.zip dir
+
+As an example, for a dir of C<./assets>, the C<reset.css> asset should be available as:
+
+    ./assets/reset/reset.css
+
+=head2 YUI::Loader->new_from_uri([ base => <base> ])
+
+Return a new YUI::Loader object configured to serve assets from an arbitrary uri
+
+As an example, for a base of C<http://example.com/assets>, the C<reset.css> asset should be available as:
+
+    http://example.com/assets/reset.css
+
+=head2 YUI::Loader->new_from_dir([ dir => <dir> ])
+
+Return a new YUI::Loader object configured to serve assets from an arbitrary dir
+
+As an example, for a dir of C<./assets>, the C<reset.css> asset should be available as:
+
+    ./assets/reset.css
+
+=head2 select( <component>, <component>, ..., <component> )
+
+Include each <component> in the "manifest" for the loader.
+
+A <component> should correspond to an entry in the C<YUI component catalog> (see below)
+
+=head2 include
+
+Returns a chainable component selector that will include what is called
+
+You can use the methods of the selector to choose components to include. See C<YUI component catalog> below 
+
+You can return to the loader by using the special ->then method:
+
+    $loader->include->reset->yuilogger->grids->fonts->then->html;
+
+=head2 exclude
+
+Returns a chainable component selector that will exclude what is called
+
+You can use the methods of the selector to choose components to include. See C<YUI component catalog> below 
+
+You can return to the loader by using the special ->then method:
+
+    $loader->exclude->yuilogger->then->html;
+
+=head2 filter_min 
+
+Turn on the -min filter for all included components
+
+For example:
+
+    connection-min.js
+    yuilogger-min.js
+    base-min.css
+    fonts-min.css
+
+=head2 filter_debug 
+
+Turn on the -debug filter for all included components
+
+For example:
+
+    connection-debug.js
+    yuilogger-debug.js
+    base-debug.css
+    fonts-debug.css
+
+=head2 no_filter 
+
+Disable filtering of included components
+
+For example:
+
+    connection.js
+    yuilogger.js
+    base.css
+    fonts.css
+
+=head2 uri( <component> )
+
+Attempt to fetch a L<URI> for <component> using the current filter setting of the loader (-min, -debug, etc.)
+
+If the loader has a cache, then this method will try to fetch from the cache. Otherwise it will use the source.
+
+=head2 file( <component> )
+
+Attempt to fetch a L<Path::Class::File> for <component> using the current filter setting of the loader (-min, -debug, etc.)
+
+If the loader has a cache, then this method will try to fetch from the cache. Otherwise it will use the source.
+
+=head2 cache_uri( <component> )
+
+Attempt to fetch a L<URI> for <component> using the current filter setting of the loader (-min, -debug, etc.) from the cache
+
+=head2 cache_file( <component> )
+
+Attempt to fetch a L<Path::Class::File> for <component> using the current filter setting of the loader (-min, -debug, etc.) from the cache
+
+=head2 source_uri( <component> )
+
+Attempt to fetch a L<URI> for <component> using the current filter setting of the loader (-min, -debug, etc.) from the source
+
+=head2 source_file( <component> )
+
+Attempt to fetch a L<Path::Class::File> for <component> using the current filter setting of the loader (-min, -debug, etc.) from the source
+
+=head2 item( <component> )
+
+Return a L<YUI::Loader::Item> for <component> using the current filter setting of the loader (-min, -debug, etc.)
+
+=head2 item_path( <component> )
+
+Return the item path for <component> using the current filter setting of the loader (-min, -debug, etc.)
+
+=head2 item_file( <component> )
+
+Return the item file for <component> using the current filter setting of the loader (-min, -debug, etc.)
+
+=head2 html
+
+Generate and return a string containing HTML describing how to include components. For example, you can use this in the <head> section
+of a web page.
+
+If the loader has a cache, then it will attempt to generate URIs from the cache, otherwise it will use the source.
+
+Here is an example:
+
+    <link rel="stylesheet" href="http://example.com/assets/reset.css" type="text/css"/>
+    <link rel="stylesheet" href="http://example.com/assets/fonts.css" type="text/css"/>
+    <link rel="stylesheet" href="http://example.com/assets/base.css" type="text/css"/>
+    <script src="http://example.com/assets/yahoo.js" type="text/javascript"></script>
+    <script src="http://example.com/assets/dom.js" type="text/javascript"></script>
+    <script src="http://example.com/assets/event.js" type="text/javascript"></script>
+    <script src="http://example.com/assets/logger.js" type="text/javascript"></script>
+    <script src="http://example.com/assets/yuitest.js" type="text/javascript"></script>
+
+=head2 source_html
+
+Generate and return a string containing HTML describing how to include components. For example, you can use this in the <head> section
+of a web page.
+
+Here is an example:
+
+    <link rel="stylesheet" href="http://example.com/assets/reset.css" type="text/css"/>
+    <link rel="stylesheet" href="http://example.com/assets/fonts.css" type="text/css"/>
+    <link rel="stylesheet" href="http://example.com/assets/base.css" type="text/css"/>
+    <script src="http://example.com/assets/yahoo.js" type="text/javascript"></script>
+    <script src="http://example.com/assets/dom.js" type="text/javascript"></script>
+    <script src="http://example.com/assets/event.js" type="text/javascript"></script>
+    <script src="http://example.com/assets/logger.js" type="text/javascript"></script>
+    <script src="http://example.com/assets/yuitest.js" type="text/javascript"></script>
 
 =head1 YUI component catalog
 
@@ -694,14 +682,6 @@ Loader Utility (utility)
 
 YUI Test Utility (tool)
 
-=cut
-
-1;
-
-=head1 AUTHOR
-
-Robert Krimen, C<< <rkrimen at cpan.org> >>
-
 =head1 SEE ALSO
 
 L<http://developer.yahoo.com/yui/>
@@ -710,56 +690,16 @@ L<http://developer.yahoo.com/yui/yuiloader/>
 
 L<JS::jQuery::Loader>
 
-=head1 BUGS
+=head1 AUTHOR
 
-Please report any bugs or feature requests to C<bug-js-yui-loader at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=YUI-Loader>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
+  Robert Krimen <robertkrimen@gmail.com>
 
+=head1 COPYRIGHT AND LICENSE
 
+This software is copyright (c) 2010 by Robert Krimen.
 
-
-=head1 SUPPORT
-
-You can find documentation for this module with the perldoc command.
-
-    perldoc YUI::Loader
-
-
-You can also look for information at:
-
-=over 4
-
-=item * RT: CPAN's request tracker
-
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=YUI-Loader>
-
-=item * AnnoCPAN: Annotated CPAN documentation
-
-L<http://annocpan.org/dist/YUI-Loader>
-
-=item * CPAN Ratings
-
-L<http://cpanratings.perl.org/d/YUI-Loader>
-
-=item * Search CPAN
-
-L<http://search.cpan.org/dist/YUI-Loader>
-
-=back
-
-
-=head1 ACKNOWLEDGEMENTS
-
-
-=head1 COPYRIGHT & LICENSE
-
-Copyright 2008 Robert Krimen, all rights reserved.
-
-This program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself.
-
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
 
 =cut
 
-1; # End of YUI::Loader
